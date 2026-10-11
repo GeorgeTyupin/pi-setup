@@ -1,14 +1,11 @@
 # pi-setup
 
-Переносимая сборка Pi. Нужен Node.js ≥22.19. Установка; обновление с запуском:
+Переносимая сборка Pi. Нужен Node.js ≥22.19. Одна команда устанавливает или обновляет сборку и запускает Pi:
 
-## Установка
+## Установка и обновление
+
 ```sh
-npx --yes --package=https://codeload.github.com/GeorgeTyupin/pi-setup/tar.gz/refs/heads/main pi-setup install
-```
-## Обновление
-```sh
-npx --yes --package=https://codeload.github.com/GeorgeTyupin/pi-setup/tar.gz/refs/heads/main pi-setup update
+npx --yes --package="https://codeload.github.com/GeorgeTyupin/pi-setup/tar.gz/refs/heads/main?v=0.2.1" pi-setup
 ```
 
 ```text

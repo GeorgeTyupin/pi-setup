@@ -4,6 +4,7 @@ import { resolve, join } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
+import { createInterface } from "node:readline/promises";
 import { execFileSync } from "node:child_process";
 import { assertNode, dataRoot, runNpm } from "./platform.mjs";
 import { launch } from "./launch.mjs";
@@ -14,6 +15,22 @@ function readState(agentDir) {
   const path = join(agentDir, "pi-config-state.json");
   try { return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {}; }
   catch (error) { throw new Error(`Cannot read installer state: ${error.message}`); }
+}
+async function confirmAdoption(agentDir, state, { adopt, dryRun }) {
+  if (adopt || dryRun || state.profile) return Boolean(adopt);
+  const path = join(agentDir, "settings.json");
+  if (!existsSync(path)) return false;
+  let settings;
+  try { settings = JSON.parse(readFileSync(path, "utf8")); }
+  catch (error) { throw new Error(`Cannot read existing settings: ${error.message}`); }
+  if (Object.keys(settings).every(key => ["deviceId", "lastChangelogVersion", "enableInstallTelemetry"].includes(key))) return false;
+  if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Existing unmanaged Pi settings: run pi-setup --adopt to preserve them and connect the configuration, or choose --agent-dir PATH");
+  const prompt = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await prompt.question("Keep your existing Pi settings and connect this configuration? [y/N] ");
+    if (!["y", "yes", "да"].includes(answer.trim().toLowerCase())) throw new Error("Installation cancelled; existing settings unchanged");
+    return true;
+  } finally { prompt.close(); }
 }
 export async function latestSource() {
   // Resolve main independently of npx's package cache, then install an immutable SHA.
@@ -47,18 +64,21 @@ export async function main(argv = process.argv.slice(2), { preparedRoot } = {}) 
   const separator = argv.indexOf("--"), piArgs = separator < 0 ? [] : argv.slice(separator + 1);
   const { values, positionals } = parseArgs({ args: separator < 0 ? argv : argv.slice(0, separator), allowPositionals: true, options: {
     "agent-dir": { type: "string" }, profile: { type: "string" }, "source-root": { type: "string" },
-    adopt: { type: "boolean" }, "dry-run": { type: "boolean" }, "skip-install": { type: "boolean" },
+    adopt: { type: "boolean" }, "dry-run": { type: "boolean" }, dryrun: { type: "boolean" }, "skip-install": { type: "boolean" },
     "no-launch": { type: "boolean" }, help: { type: "boolean", short: "h" },
   } });
   if (values.help) {
-    console.log("pi-setup install | update [--agent-dir PATH] [--adopt] [--dry-run] [--no-launch]\nupdate installs the latest configuration and launches Pi; pass Pi arguments after --.");
+    console.log("pi-setup [--agent-dir PATH] [--adopt] [--dry-run|--dryrun] [--no-launch]\nInstalls or updates the configuration, then launches Pi; pass Pi arguments after --.");
     return 0;
   }
+  values["dry-run"] = Boolean(values["dry-run"] || values.dryrun);
   assertNode();
-  const command = positionals[0] || "install";
-  if (!["install", "update"].includes(command) || positionals.length > 1) throw new Error("Use pi-setup install or pi-setup update");
+  // Legacy subcommands remain aliases; the installed state selects the operation.
+  const requested = positionals[0];
+  if ((requested && !["install", "update"].includes(requested)) || positionals.length > 1) throw new Error("Use pi-setup without a subcommand");
   const agentDir = resolve(values["agent-dir"] || process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi/agent"));
   const state = readState(agentDir), profile = values.profile || state.profile || "home";
+  const command = state.profile ? "update" : "install";
   if (!["home", "work"].includes(profile)) throw new Error("Unknown profile");
   if (state.profile && state.profile !== profile) throw new Error("Use a separate --agent-dir to switch profiles safely");
   let root = preparedRoot || (values["source-root"] && resolve(values["source-root"]));
@@ -80,12 +100,13 @@ export async function main(argv = process.argv.slice(2), { preparedRoot } = {}) 
       return fresh.main(argv, { preparedRoot: root });
     }
   }
+  const adopt = await confirmAdoption(agentDir, state, { adopt: values.adopt, dryRun: values["dry-run"] });
   const { configure } = await import(pathToFileURL(join(root, "scripts/setup.mjs")).href);
-  const result = configure({ root, agentDir, profile, adopt: values.adopt, dryRun: values["dry-run"], skipInstall: values["skip-install"] });
+  const result = configure({ root, agentDir, profile, adopt, dryRun: values["dry-run"], skipInstall: values["skip-install"] });
   if (values["dry-run"]) { console.log(JSON.stringify(result, null, 2)); return 0; }
   console.log(`Pi ${command === "update" ? "updated" : "installed"}.`);
-  if (command === "update" && !values["no-launch"]) {
-    if (!result.runtime) throw new Error("Pi runtime is missing; run install without --skip-install");
+  if (!values["no-launch"]) {
+    if (!result.runtime) throw new Error("Pi runtime is missing; run pi-setup without --skip-install");
     return launch(agentDir, result.runtime, piArgs);
   }
   return 0;

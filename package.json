@@ -1,16 +1,17 @@
 {
-  "name": "pi-personal-config",
-  "version": "0.1.0",
+  "name": "pi-setup",
+  "version": "0.2.0",
   "private": true,
+  "bin": { "pi-setup": "scripts/cli.mjs" },
   "type": "module",
   "description": "Portable Pi configuration with a separate local work layer",
   "engines": { "node": ">=22.19.0" },
   "piRuntimeVersion": "1.1.0",
   "pi": {
-    "extensions": ["./extensions", "!extensions/idea-selection/**"],
+    "extensions": ["./extensions", "!extensions/idea-selection/**", "!extensions/idea-selection.*"],
     "skills": ["./skills/*/SKILL.md", "!skills/paiw/**"]
   },
-  "files": ["extensions", "skills/*/SKILL.md", "skills/*/references", "skills/*/scripts", "skills/*/assets", "config", "scripts", "setup", "README.md", "AGENTS.example.md", "docs"],
+  "files": ["extensions", "skills/*/SKILL.md", "skills/*/references", "skills/*/scripts", "skills/*/assets", "config", "scripts", "README.md", "docs"],
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*"
@@ -20,7 +21,6 @@
     "@earendil-works/pi-tui": { "optional": true }
   },
   "scripts": {
-    "check": "node scripts/check-portability.mjs",
-    "setup": "node scripts/setup.mjs"
+    "check": "node scripts/check-portability.mjs"
   }
 }

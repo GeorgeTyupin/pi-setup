@@ -15,7 +15,7 @@ export function checkPortability(root) {
     if (stat.isDirectory()) {
       for (const name of readdirSync(path)) {
         if (["node_modules", ".DS_Store", ".cache"].includes(name)) continue;
-        if (path === join(root, "extensions") && name === "idea-selection") continue;
+        if (path === join(root, "extensions") && (name === "idea-selection" || name.startsWith("idea-selection."))) continue;
         visit(join(path, name), target);
       }
     } else target.push(path);
@@ -33,7 +33,7 @@ export function checkPortability(root) {
     if (!existsSync(directory)) continue;
     for (const name of readdirSync(directory)) {
       if ([".DS_Store", ".cache", "node_modules", ".npmignore"].includes(name)) continue;
-      if (layer === "extensions" && name === "idea-selection") continue;
+      if (layer === "extensions" && (name === "idea-selection" || name.startsWith("idea-selection."))) continue;
       const component = join(directory, name);
       if (!lstatSync(component).isDirectory() || lstatSync(component).isSymbolicLink()) {
         errors.push(`Extension must be a real directory: ${relative(root, component)}`);
@@ -97,7 +97,7 @@ export function checkPortability(root) {
   }
   try {
     const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-    if (JSON.stringify(manifest.pi) !== JSON.stringify({ extensions: ["./extensions", "!extensions/idea-selection/**"], skills: ["./skills/*/SKILL.md", "!skills/paiw/**"] })) errors.push("Unexpected Pi manifest: review resource boundaries");
+    if (JSON.stringify(manifest.pi) !== JSON.stringify({ extensions: ["./extensions", "!extensions/idea-selection/**", "!extensions/idea-selection.*"], skills: ["./skills/*/SKILL.md", "!skills/paiw/**"] })) errors.push("Unexpected Pi manifest: review resource boundaries");
     if ((manifest.files ?? []).some(path => path === "work" || path.startsWith("work/"))) errors.push("Work layer included in package files");
     const base = JSON.parse(readFileSync(join(root, "config/settings.base.json"), "utf8"));
     if (["defaultProvider", "defaultModel", "enabledModels"].some(key => key in base)) errors.push("Provider/model bindings must remain local");
@@ -114,7 +114,7 @@ export function checkPortability(root) {
         const content = readFileSync(absolute, "utf8");
         if (/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\b(?:glpat-|ghp_|sk-proj-)[A-Za-z0-9_-]{16,}/.test(content)) errors.push(`Possible credential visible to Git: ${path}`);
       }
-      if (/^(?:work\/|skills\/paiw\/|extensions\/idea-selection\/|(?:auth|settings|models|mcp)\.json$|AGENTS\.md$|sessions\/|backups\/|install\/|npm\/)/.test(path)) errors.push(`Local file visible to Git: ${path}`);
+      if (/^(?:work\/|skills\/paiw\/|extensions\/idea-selection(?:\/|\.)|(?:auth|settings|models|mcp)\.json$|AGENTS\.md$|sessions\/|backups\/|install\/|npm\/)/.test(path)) errors.push(`Local file visible to Git: ${path}`);
     }
   } catch { /* A downloaded archive need not contain Git metadata. */ }
   return { errors, checkedFiles: files.length };

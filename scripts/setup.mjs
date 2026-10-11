@@ -1,11 +1,11 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, copyFileSync, lstatSync, chmodSync, realpathSync } from "node:fs";
-import { resolve, join, dirname } from "node:path";
+import { resolve, join, dirname, relative } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { parseArgs } from "node:util";
 import { checkPortability } from "./check-portability.mjs";
-
+import { sdkName, runtimeEntry, runNpm, launcherText } from "./platform.mjs";
 export const sourceRoot = resolve(fileURLToPath(new URL("../", import.meta.url)));
 function readJson(path, optional = false) {
   try { return JSON.parse(readFileSync(path, "utf8")); }
@@ -53,6 +53,24 @@ export function planSettings({ root, agentDir, profile, current = {}, state = {}
   return { settings: result, managedPackages, managedPaths, managedValues };
 }
 
+// Installer-owned instructions are embedded; no separate example file is needed.
+const INSTRUCTIONS = `# Правила сборки Pi
+
+- Исходники сборки находятся в {{SOURCE_ROOT}}, не в cwd разрабатываемого проекта.
+- Общие скиллы: skills/<slug>/SKILL.md, name <slug>, вызов /pi:<slug>.
+- Рабочие скиллы: work/skills/<slug>/SKILL.md, name <slug>, вызов /work:<slug>; старые имена с -oneab сохраняй.
+- Категория определяется расположением. Проверяй конфликты нативных имён Pi; префиксы автоматически не добавляй.
+- Каждый extension — атомарная папка с index.ts и локальными helpers. Не импортируй код из соседних extensions или общей lib/.
+- Явные create / «общий» выбирают общий слой, create work / «рабочий» — work. Без режима определяй по обязательным зависимостям, при неоднозначности или противоречии спрашивай.
+- Сторонние ресурсы относятся к /other:<name>; управляемые PAIW-источники не редактируй и не копируй в сборку.
+- Перед созданием скилла используй /pi:skill-creator. Перенос в work: /pi:to-work или preview scripts/components.mjs to-work.
+- Новые компоненты обнаруживаются по каталогам; отдельных записей в manifest и gitignore не требуется.
+- Общие компоненты не должны содержать secrets, внутренние адреса, пути пользователя или обязательные рабочие зависимости.
+- Выполняй scripts/check-portability.mjs и доступные проверки кода. Папки tests/ и work/tests/ этой сборки не создавай без запроса. Предлагай /reload. Не коммить и не публикуй автоматически.
+- Внешние npm-extensions добавляй в config/settings.base.json с точной версией; зависимости своего extension — в его package.json с согласованием установки. Host-пакеты Pi — peerDependencies.
+- Перед публикацией проверяй состав коммита, секреты и права на сторонний код: gitignore не удаляет файлы из истории.
+`;
+
 const BEGIN = "<!-- BEGIN PI CONFIG -->", END = "<!-- END PI CONFIG -->";
 export function mergeInstructions(existing, template, root) {
   const block = `${BEGIN}\n${template.replaceAll("{{SOURCE_ROOT}}", root).trim()}\n${END}`;
@@ -66,7 +84,7 @@ function saveFile(path, content, agentDir, mode = 0o600) {
   if (existsSync(path)) {
     if (lstatSync(path).isSymbolicLink()) throw new Error(`Refusing to overwrite symlink: ${path}`);
     if (readFileSync(path, "utf8") === content) return;
-    const backup = join(agentDir, "backups", `config-${Date.now()}-${process.pid}`, path.slice(agentDir.length).replace(/^\//, ""));
+    const backup = join(agentDir, "backups", `config-${Date.now()}-${process.pid}`, relative(agentDir, path));
     mkdirSync(dirname(backup), { recursive: true, mode: 0o700 });
     copyFileSync(path, backup);
     chmodSync(backup, 0o600);
@@ -76,19 +94,16 @@ function saveFile(path, content, agentDir, mode = 0o600) {
   writeFileSync(temp, content, { mode, flag: "wx" });
   renameSync(temp, path);
 }
-const shellQuote = text => `'${text.replaceAll("'", "'\\''")}'`;
 function findPi(root, agentDir, version) {
-  let external;
-  try { external = execFileSync("sh", ["-c", "command -v pi"], { encoding: "utf8" }).trim(); } catch { /* optional */ }
-  for (const path of [join(agentDir, "bin/pi"), join(root, "bin/pi"), external].filter(Boolean)) {
-    try {
-      const output = execFileSync(path, ["--version"], { encoding: "utf8", timeout: 15000 }).trim();
-      if (output === version) return path;
-    } catch { /* use a private pinned runtime instead */ }
+  const roots = [join(agentDir, "runtime/node_modules", sdkName), join(agentDir, "node_modules", sdkName), join(root, "node_modules", sdkName)];
+  for (const packageRoot of roots) {
+    const runtime = runtimeEntry(packageRoot, version);
+    if (runtime) return runtime;
   }
-  const privatePi = join(agentDir, "runtime/node_modules/.bin/pi");
-  try { if (execFileSync(privatePi, ["--version"], { encoding: "utf8", timeout: 15000 }).trim() === version) return privatePi; } catch { /* not installed */ }
-  return undefined;
+  try {
+    const globalRoot = runNpm(["root", "--global"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).stdout.trim();
+    return runtimeEntry(join(globalRoot, sdkName), version);
+  } catch { return undefined; }
 }
 
 export function configure({ root = sourceRoot, agentDir, profile, adopt = false, dryRun = false, skipInstall = false }) {
@@ -107,9 +122,9 @@ export function configure({ root = sourceRoot, agentDir, profile, adopt = false,
   const plan = planSettings({ root, agentDir, profile, current, state, base, work });
   const agentsPath = join(agentDir, "AGENTS.md");
   const existingAgents = existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : "";
-  const agents = mergeInstructions(existingAgents, readFileSync(join(root, "AGENTS.example.md"), "utf8"), root);
+  const agents = mergeInstructions(existingAgents, INSTRUCTIONS, root);
   const footer = profile === "work" && existsSync(join(root, "work/codex-footer.json")) ? readJson(join(root, "work/codex-footer.json")) : undefined;
-  for (const path of [settingsPath, statePath, agentsPath, join(agentDir, "codex-footer.json"), join(agentDir, "bin"), join(agentDir, "bin/pi-config"), join(agentDir, "backups")]) {
+  for (const path of [agentDir, settingsPath, statePath, agentsPath, join(agentDir, "runtime"), join(agentDir, "codex-footer.json"), join(agentDir, "bin"), ...["pi-config", "pi-config.cmd", "pi-config.mjs", "pi-runtime.json"].map(name => join(agentDir, "bin", name)), join(agentDir, "backups")]) {
     if (existsSync(path) && lstatSync(path).isSymbolicLink()) throw new Error(`Refusing managed destination symlink: ${path}`);
   }
   if (dryRun) return { profile, agentDir, ...plan };
@@ -121,9 +136,9 @@ export function configure({ root = sourceRoot, agentDir, profile, adopt = false,
   }
   let pi = findPi(root, agentDir, manifest.piRuntimeVersion);
   if (!pi && !skipInstall) {
-    const installed = spawnSync("npm", ["install", "--prefix", join(agentDir, "runtime"), "--ignore-scripts", "--omit=dev", "--no-audit", "--no-fund", "--save-exact", `@earendil-works/pi-coding-agent@${manifest.piRuntimeVersion}`], { stdio: "inherit" });
-    if (installed.error || installed.status !== 0) throw new Error("Pinned Pi runtime installation failed; settings unchanged");
-    pi = join(agentDir, "runtime/node_modules/.bin/pi");
+    runNpm(["install", "--prefix", join(agentDir, "runtime"), "--ignore-scripts", "--omit=dev", "--no-audit", "--no-fund", "--save-exact", `${sdkName}@${manifest.piRuntimeVersion}`]);
+    pi = runtimeEntry(join(agentDir, "runtime/node_modules", sdkName), manifest.piRuntimeVersion);
+    if (!pi) throw new Error("Pinned Pi runtime validation failed; settings unchanged");
   }
   saveFile(settingsPath, JSON.stringify(plan.settings, null, 2) + "\n", agentDir);
   saveFile(agentsPath, agents, agentDir, 0o644);
@@ -131,17 +146,19 @@ export function configure({ root = sourceRoot, agentDir, profile, adopt = false,
     saveFile(join(agentDir, "codex-footer.json"), JSON.stringify(footer, null, 2) + "\n", agentDir);
   }
   if (pi) {
-    const executable = shellQuote(pi);
-    const launcher = `#!/bin/sh\nexport PI_CODING_AGENT_DIR=${shellQuote(agentDir)}\nexport PATH=${shellQuote(dirname(process.execPath))}:"$PATH"\nexec ${executable} "$@"\n`;
-    saveFile(join(agentDir, "bin/pi-config"), launcher, agentDir, 0o755);
+    const script = join(agentDir, "bin/pi-config.mjs");
+    saveFile(script, readFileSync(new URL("./launch.mjs", import.meta.url), "utf8"), agentDir, 0o644);
+    saveFile(join(agentDir, "bin/pi-runtime.json"), JSON.stringify({ agentDir, ...pi }, null, 2) + "\n", agentDir);
+    saveFile(join(agentDir, "bin", process.platform === "win32" ? "pi-config.cmd" : "pi-config"), launcherText(process.execPath, script), agentDir, 0o755);
   }
   // Record ownership before package downloads, so an interrupted install can be resumed safely.
   saveFile(statePath, JSON.stringify({ profile, sourceRoot: root, ...plan }, null, 2) + "\n", agentDir);
   if (!skipInstall) {
-    const updated = spawnSync(pi, ["update", "--extensions"], { stdio: "inherit", env: { ...process.env, PI_CODING_AGENT_DIR: agentDir } });
+    const updated = spawnSync(pi.node, [pi.script, "update", "--extensions"], { stdio: "inherit", env: { ...process.env, PI_CODING_AGENT_DIR: agentDir } });
     if (updated.error || updated.status !== 0) throw new Error("Package installation failed; local backups are in backups/. Re-run setup after resolving the error.");
   }
-  return { profile, agentDir, skippedInstall: skipInstall, launcher: pi ? join(agentDir, "bin/pi-config") : undefined };
+  const launcher = join(agentDir, "bin", process.platform === "win32" ? "pi-config.cmd" : "pi-config");
+  return { profile, agentDir, skippedInstall: skipInstall, runtime: pi, launcher: pi ? launcher : undefined };
 }
 
 if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -149,25 +166,16 @@ if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[
     const { values } = parseArgs({ options: {
       profile: { type: "string", default: "home" }, "agent-dir": { type: "string" },
       "dry-run": { type: "boolean" }, "skip-install": { type: "boolean" }, adopt: { type: "boolean" },
-      update: { type: "boolean" }, help: { type: "boolean" },
+      help: { type: "boolean" },
     } });
     if (values.help) {
-      console.log("./setup [--profile home|work] [--agent-dir PATH] [--dry-run] [--adopt] [--skip-install] [--update]");
+      console.log("Internal configuration: node scripts/setup.mjs [--profile home|work] [--agent-dir PATH] [--dry-run] [--adopt] [--skip-install]");
     } else {
       const [major, minor] = process.versions.node.split(".").map(Number);
       if (major < 22 || (major === 22 && minor < 19)) throw new Error("Node.js >=22.19 is required");
-      if (values.update) {
-        if (values["dry-run"]) throw new Error("--update changes the checkout; do not combine it with --dry-run");
-        if (execFileSync("git", ["status", "--porcelain"], { cwd: sourceRoot, encoding: "utf8" }).trim()) throw new Error("Commit or resolve source changes before updating");
-        execFileSync("git", ["pull", "--ff-only"], { cwd: sourceRoot, stdio: "inherit" });
-        // Run the freshly pulled installer, not modules imported before git pull.
-        const restarted = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...process.argv.slice(2).filter(arg => arg !== "--update")], { stdio: "inherit" });
-        if (restarted.error) throw restarted.error;
-        process.exit(restarted.status ?? 1);
-      }
       const result = configure({ agentDir: values["agent-dir"] ?? process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi/agent"), profile: values.profile, adopt: values.adopt, dryRun: values["dry-run"], skipInstall: values["skip-install"] });
       console.log(JSON.stringify(result, null, 2));
-      if (!values["dry-run"]) console.log(`${values["skip-install"] ? "Configuration prepared; runtime/package downloads skipped." : "Setup complete."} Use /login and /model for your own provider. Existing credentials and sessions were not copied or edited.`);
+      if (!values["dry-run"]) console.log(values["skip-install"] ? "Configuration prepared; downloads skipped." : "Pi setup complete.");
     }
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }

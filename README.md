@@ -2,8 +2,12 @@
 
 Переносимая сборка Pi. Нужен Node.js ≥22.19. Установка; обновление с запуском:
 
+## Установка
 ```sh
 npx --yes --package=https://codeload.github.com/GeorgeTyupin/pi-setup/tar.gz/refs/heads/main pi-setup install
+```
+## Обновление
+```sh
 npx --yes --package=https://codeload.github.com/GeorgeTyupin/pi-setup/tar.gz/refs/heads/main pi-setup update
 ```
 

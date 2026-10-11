@@ -1,0 +1,14 @@
+# Local third-party integration is not part of the distributable package.
+idea-selection/
+
+# Do not package local credentials, dependencies or generated files.
+**/node_modules/
+**/.DS_Store
+**/.env
+**/.env.*
+**/*.secret.yaml
+**/auth.json
+**/*.pem
+**/*.key
+**/*.log
+**/.cache/

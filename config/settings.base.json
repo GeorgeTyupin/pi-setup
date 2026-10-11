@@ -1,0 +1,15 @@
+{
+  "packages": [
+    "npm:pi-cd@0.1.0",
+    "npm:pi-execution-time@0.2.0",
+    "npm:pi-context-view@0.6.0",
+    "npm:@hank-warren/pi-ask-user-question@0.6.1",
+    "npm:pi-session-kit@0.1.2",
+    "npm:pi-better-edit@2.11.0",
+    "npm:pi-lens@4.3.0",
+    "npm:pi-image-view@0.5.0"
+  ],
+  "enableSkillCommands": true,
+  "defaultThinkingLevel": "medium",
+  "compaction": { "enabled": true }
+}

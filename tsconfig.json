@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": false,
+    "types": ["node"]
+  },
+  "include": ["extensions/**/*.ts", "extensions/**/*.mts", "extensions/**/*.mjs"],
+  "exclude": ["work", "install", "npm", "node_modules"]
+}

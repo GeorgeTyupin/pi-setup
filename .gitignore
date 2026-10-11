@@ -1,0 +1,30 @@
+# Allow only portable sources and documentation at the repository root.
+/*
+!/.gitignore
+!/README.md
+!/AGENTS.example.md
+!/package.json
+!/tsconfig.json
+!/setup
+!/config/
+!/docs/
+!/extensions/
+!/scripts/
+!/skills/
+
+# Local work layer and integration-owned skills never enter this repository.
+/work/
+/skills/paiw/
+/extensions/idea-selection/
+
+# Secrets, dependencies and generated files, including inside source directories.
+**/node_modules/
+**/.DS_Store
+**/.env
+**/.env.*
+**/*.secret.yaml
+**/auth.json
+**/*.pem
+**/*.key
+**/*.log
+**/.cache/

@@ -20,12 +20,23 @@ export function wrapNamespaceAutocomplete(current: AutocompleteProvider, getAlia
       const token = match[1];
       if (token.startsWith("/skill:")) return current.getSuggestions(lines, row, col, options);
       const aliases = [...getAliases().values()].filter((item): item is NonNullable<typeof item> => item !== null);
-      const items = fuzzyFilter(aliases, token.slice(1), item => item.alias)
+      const query = token.slice(1);
+      const scoped = query.includes(":") || /^(?:work|pi|other)$/i.test(query);
+      // Rank bare skill names, not namespace lengths or description text.
+      const priority: Record<string, number> = { work: 0, pi: 1, other: 2 };
+      const items = fuzzyFilter(aliases, query, item => scoped ? item.alias : item.alias.slice(item.alias.indexOf(":") + 1))
+        .sort((a, b) => priority[a.alias.split(":")[0]] - priority[b.alias.split(":")[0]])
         .map(item => ({ value: item.alias, label: item.alias, description: item.description }));
       const native = await current.getSuggestions(lines, row, col, options);
       if (options?.signal?.aborted) return null;
-      const others = native?.prefix === token ? native.items.filter(item => !item.value.startsWith("skill:")) : [];
-      const merged = [...others, ...items];
+      const aliasNames = new Set(aliases.map(item => item.alias));
+      const others = native?.prefix === token ? native.items.filter(item => !item.value.startsWith("skill:") && !aliasNames.has(item.value)) : [];
+      // Match commands and skills together, using the same bare-name scoring.
+      const ranked = fuzzyFilter([...others, ...items], query, item =>
+        aliasNames.has(item.value) && !scoped ? item.value.slice(item.value.indexOf(":") + 1) : item.value);
+      // Reorder only skill slots: namespace priority must never move command slots.
+      let skillIndex = 0;
+      const merged = ranked.map(item => aliasNames.has(item.value) ? items[skillIndex++] : item);
       return merged.length ? { items: merged, prefix: token } : null;
     },
     applyCompletion(lines, row, col, item, prefix) {

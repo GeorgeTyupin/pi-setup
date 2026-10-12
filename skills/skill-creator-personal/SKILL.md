@@ -1,5 +1,5 @@
 ---
-name: skill-creator
+name: skill-creator-personal
 disable-model-invocation: true
 description: По явному запросу создаёт и редактирует нативные скиллы Pi в общем или локальном рабочем слое. Определяет категорию, согласует план и проверяет переносимость.
 argument-hint: "[create | create work] <название и назначение>"

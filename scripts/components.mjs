@@ -57,7 +57,7 @@ export function moveToWork(root, type, name, apply = false) {
   root = realpathSync(root);
   if (!["skill", "extension"].includes(type) || !validName(name)) throw new Error("Use to-work <skill|extension> <exact-name> [--apply]");
   if (type === "skill" && name === "paiw") throw new Error("Integration-owned skills may not be moved");
-  if (type === "skill" && ["to-work", "skill-creator"].includes(name)) throw new Error("Administrative skills stay in the portable layer");
+  if (type === "skill" && ["to-work", "skill-creator-personal"].includes(name)) throw new Error("Administrative skills stay in the portable layer");
   const base = join(root, type === "skill" ? "skills" : "extensions", name);
   const candidates = type === "skill" ? [base] : [base, `${base}.ts`, `${base}.js`];
   const found = candidates.filter(existsSync);

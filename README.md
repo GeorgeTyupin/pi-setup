@@ -21,7 +21,7 @@ pi-setup/
 │   ├── code-review/
 │   ├── curler/
 │   ├── docs-loader/
-│   ├── skill-creator/
+│   ├── skill-creator-personal/
 │   ├── standby/
 │   ├── tester/
 │   └── to-work/

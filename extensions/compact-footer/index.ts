@@ -98,7 +98,8 @@ export default function (pi: ExtensionAPI) {
 					const left = truncateToWidth(stats, Math.max(0, width - visibleWidth(right) - 2), "");
 					const padding = " ".repeat(Math.max(0, width - visibleWidth(left) - visibleWidth(right)));
 					const file = statuses.get("idea-selection") ?? "";
-					const fileRight = truncateToWidth(file, Math.max(0, width - 2), "");
+					const fileLabel = visibleWidth(file) > 50 ? truncateToWidth(file, 50) : file;
+					const fileRight = truncateToWidth(fileLabel, Math.max(0, width - 2), "");
 					const locationLeft = truncateToWidth(location, fileRight ? Math.max(0, width - visibleWidth(fileRight) - 2) : width, "");
 					const filePadding = fileRight ? " ".repeat(Math.max(2, width - visibleWidth(locationLeft) - visibleWidth(fileRight))) : "";
 					// Exactly two lines; file position sits above the model on the right.

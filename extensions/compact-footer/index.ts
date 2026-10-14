@@ -58,11 +58,17 @@ export default function (pi: ExtensionAPI) {
 					+ this.borderColor(label) + this.borderColor("─");
 			}
 		}
-		ctx.ui.setEditorComponent((tui, theme, keybindings) => new FooterEditor(tui, theme, keybindings, {
-			embedWorkingStatus: true,
-		}));
 		releaseEditorClaim?.();
-		releaseEditorClaim = pi.events.on("pi-config:editor-query", () => pi.events.emit("pi-config:editor-claimed", {}));
+		ctx.ui.setEditorComponent((tui, theme, keybindings) => {
+			const editor = new FooterEditor(tui, theme, keybindings, { embedWorkingStatus: true });
+			const announce = () => {
+				pi.events.emit("pi-config:editor-claimed", {});
+				pi.events.emit("pi-config:editor-created", { editor, keybindings });
+			};
+			releaseEditorClaim = pi.events.on("pi-config:editor-query", announce);
+			announce();
+			return editor;
+		});
 		ctx.ui.setFooter((tui, theme, data) => {
 			const unsubscribe = data.onBranchChange(() => tui.requestRender());
 			return {

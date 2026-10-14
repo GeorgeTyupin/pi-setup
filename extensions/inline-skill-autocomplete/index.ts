@@ -36,14 +36,23 @@ export function wrapSkillAutocomplete(current: AutocompleteProvider): Autocomple
 
 
 export default function (pi: ExtensionAPI) {
+	let stopEditorQuery: (() => void) | undefined;
+	pi.on("session_shutdown", () => { stopEditorQuery?.(); });
 	pi.on("session_start", (_event, ctx) => {
+		stopEditorQuery?.();
 		if (ctx.mode !== "tui") return;
 		ctx.ui.addAutocompleteProvider(wrapSkillAutocomplete);
 		// Optional editor coordination; works alone and in either extension load order.
 		let claimed = false;
 		const unsubscribe = pi.events.on("pi-config:editor-claimed", () => { claimed = true; });
 		try { pi.events.emit("pi-config:editor-query", {}); } finally { unsubscribe(); }
-		if (!claimed) ctx.ui.setEditorComponent((tui, theme, keybindings) => new InlineSkillEditor(tui, theme, keybindings));
+		if (!claimed) ctx.ui.setEditorComponent((tui, theme, keybindings) => {
+			const editor = new InlineSkillEditor(tui, theme, keybindings);
+			const announce = () => pi.events.emit("pi-config:editor-created", { editor, keybindings });
+			stopEditorQuery = pi.events.on("pi-config:editor-query", announce);
+			announce();
+			return editor;
+		});
 	});
 
 	pi.on("input", event => {

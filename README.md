@@ -56,5 +56,6 @@ pi-setup/
 | `pi-lens` | Навигация и диагностика кода |
 | `pi-image-view` | Просмотр изображений |
 | `pi-subagents` | Фоновые агенты |
+| `pi-web-access` | Поиск в интернете и загрузка страниц |
 
 Документация: [разработка](docs/pi-development.md) · [сопровождение и обновление](docs/pi-maintaining.md) · [публикация](docs/publishing.md).

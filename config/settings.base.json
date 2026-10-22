@@ -8,7 +8,8 @@
     "npm:pi-better-edit@2.11.0",
     "npm:pi-lens@4.3.0",
     "npm:pi-image-view@0.5.0",
-    "npm:pi-subagents@0.80.0"
+    "npm:pi-subagents@0.80.0",
+    "npm:pi-web-access@0.44.0"
   ],
   "enableSkillCommands": true,
   "defaultThinkingLevel": "medium",

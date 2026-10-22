@@ -105,8 +105,8 @@ export function configure({ root = sourceRoot, agentDir, profile, adopt = false,
   const plan = planSettings({ root, agentDir, profile, current, state, base, work });
   const agentsPath = join(agentDir, "AGENTS.md");
   const existingAgents = existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : "";
-  const template = readFileSync(join(root, "AGENTS.example.md"), "utf8");
-  const agents = mergeInstructions(existingAgents, template, root);
+  const agents = mergeInstructions(existingAgents,
+    "# Общие инструкции Pi\n\nПеред выполнением задачи обязательно прочитай и соблюдай [AGENTS.shared.md](<{{SOURCE_ROOT}}/AGENTS.shared.md>).\n\nВ общих инструкциях SOURCE_ROOT означает каталог {{SOURCE_ROOT}}.", root);
   const footer = profile === "work" && existsSync(join(root, "work/codex-footer.json")) ? readJson(join(root, "work/codex-footer.json")) : undefined;
   for (const path of [agentDir, settingsPath, statePath, agentsPath, join(agentDir, "runtime"), join(agentDir, "codex-footer.json"), join(agentDir, "bin"), ...["pi-config", "pi-config.cmd", "pi-config.mjs", "pi-runtime.json"].map(name => join(agentDir, "bin", name)), join(agentDir, "backups")]) {
     if (existsSync(path) && lstatSync(path).isSymbolicLink()) throw new Error(`Refusing managed destination symlink: ${path}`);

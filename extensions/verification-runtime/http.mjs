@@ -64,7 +64,7 @@ export async function resolveAuth(input, cwd) {
   if (input.configFile && (input.jwtFile || input.headerFiles || input.authMode)) {
     throw new RequestError("Передай либо файл-указатель, либо явные ссылки на credential-файлы.");
   }
-  if (input.configFile || (!input.jwtFile && !input.headerFiles)) {
+  if (input.configFile || (input.authMode !== "none" && !input.jwtFile && !input.headerFiles)) {
     const candidates = input.configFile ? [fileReference(input.configFile, cwd)] : [];
     if (!input.configFile) {
       let directory = resolve(cwd);
@@ -88,8 +88,11 @@ export async function resolveAuth(input, cwd) {
     base = dirname(source);
   }
   const authMode = data.authMode ?? "jwt";
-  if (!["jwt", "headers"].includes(authMode)) throw new RequestError("Схема авторизации не поддерживается. Запроси явную схему и файлы credentials.");
+  if (!["jwt", "headers", "none"].includes(authMode)) throw new RequestError("Схема авторизации не поддерживается. Уточни jwt, headers или явно выбранный none.");
   const headers = headerReferences(data.headerFiles, base);
+  if (authMode === "none" && (data.jwtFile !== undefined || headers.length)) {
+    throw new RequestError("В режиме none нельзя передавать JWT или credential-заголовки.");
+  }
   if (authMode === "jwt" && headers.some(header => /^authorization$/i.test(header.name))) {
     throw new RequestError("В JWT-режиме Authorization формируется только из jwtFile.");
   }
@@ -137,7 +140,6 @@ export async function runLocalCurl(input, cwd, signal) {
   if (!["GET", "HEAD", "OPTIONS"].includes(method) && input.mutationApproved !== true) {
     throw new RequestError("Сначала получи разрешение на последствия изменяющего HTTP-запроса.");
   }
-  if (input.authMode === "headers" && input.authApproved !== true) throw new RequestError("Не-JWT схема должна быть явно согласована пользователем.");
   const timeout = input.timeoutSeconds ?? 20;
   if (!Number.isInteger(timeout) || timeout < 1 || timeout > 120) throw new RequestError("Timeout должен быть от 1 до 120 секунд.");
   if (input.expectedStatus !== undefined && (!Number.isInteger(input.expectedStatus) || input.expectedStatus < 100 || input.expectedStatus > 599)) {
@@ -148,7 +150,9 @@ export async function runLocalCurl(input, cwd, signal) {
   }
   const auth = await resolveAuth(input, cwd);
   if (auth.status !== "ready") throw new RequestError(auth.reason);
-  if (auth.headerFiles.length && input.authApproved !== true) throw new RequestError("Дополнительные credentials и не-JWT схема должны быть явно согласованы пользователем.");
+  if ((auth.authMode !== "jwt" || auth.headerFiles.length) && input.authApproved !== true) {
+    throw new RequestError("Схемы none/headers и дополнительные credentials должны быть явно согласованы пользователем.");
+  }
   const secrets = [], headers = [];
   if (auth.jwtFile) {
     const jwt = await credential(auth.jwtFile);

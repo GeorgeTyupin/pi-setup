@@ -185,6 +185,23 @@ test('auth: missing reference blocks, with no anonymous fallback',async t=>{
   assert.equal(r.status,'blocked');assert.equal(f.requests.length,0);
   await assert.rejects(()=>f.run({jwtFile:join(f.dir,'missing.jwt')}));assert.equal(f.requests.length,0);
 });
+test('auth: explicit none needs no credentials and skips metadata discovery',async t=>{
+  const f=await fixture(t);await mkdir(join(f.dir,'.paiw'));
+  await writeFile(join(f.dir,'.paiw','verification.json'),'invalid metadata must not be read');
+  const result=await runtime(f.dir).call('verification_auth',{authMode:'none'});
+  assert.equal(result.isError,false);assert.equal(result.details.status,'ready');
+  assert.equal(result.details.authMode,'none');assert.equal(result.details.source,undefined);
+  assert.equal(result.details.jwtFile,undefined);assert.deepEqual(result.details.headerFiles,[]);
+  assert.equal(f.requests.length,0);
+});
+test('auth: none refuses credential references, including metadata',async t=>{
+  const f=await fixture(t);
+  await assert.rejects(()=>resolveAuth({authMode:'none',jwtFile:f.jwtFile},f.dir),/режиме none/);
+  await assert.rejects(()=>resolveAuth({authMode:'none',headerFiles:[{name:'X-Api-Key',file:f.jwtFile}]},f.dir),/режиме none/);
+  const meta=join(f.dir,'conflicting.json');await writeFile(meta,JSON.stringify({authMode:'none',jwtFile:'./local.jwt'}));
+  await assert.rejects(()=>resolveAuth({configFile:meta},f.dir),/режиме none/);
+  assert.equal(f.requests.length,0);
+});
 test('auth: invalid metadata never reflects its raw contents',async t=>{
   const f=await fixture(t),file=join(f.dir,'bad.json');await writeFile(file,f.jwt);
   try{await resolveAuth({configFile:file},f.dir);assert.fail('expected refusal');}catch(error){assert.equal(error.message.includes(f.jwt),false);}
@@ -222,6 +239,25 @@ test('HTTP: positive request sends JWT without exposing it in the report',async 
   assert.deepEqual(await readdir(dirname(report.reportFile)),['report.json']);
   assert.equal((await stat(report.reportFile)).mode & 0o777,0o600);
   assert.equal((await stat(dirname(report.reportFile))).mode & 0o777,0o700);
+});
+test('HTTP: explicitly approved none sends no authorization through the registered tool',async t=>{
+  const f=await fixture(t),result=await runtime(f.dir).call('verification_curl',{
+    url:f.base+'/public',authMode:'none',authApproved:true,expectedStatus:200,
+  });
+  const report=result.details;
+  if(report.reportFile)t.after(()=>rm(dirname(report.reportFile),{recursive:true,force:true}));
+  assert.equal(result.isError,false);assert.equal(report.outcome,'passed');
+  assert.equal(report.exitCode,0);assert.equal(report.httpStatus,200);
+  assert.equal(f.requests.length,1);assert.equal(f.requests[0].auth,undefined);assert.equal(f.requests[0].key,undefined);
+  assert.equal(JSON.parse(report.response).ok,true);assert.equal(JSON.stringify(report).includes(f.jwt),false);
+});
+test('HTTP: none requires prior approval even when selected by metadata',async t=>{
+  const f=await fixture(t);
+  await assert.rejects(()=>runLocalCurl({url:f.base,authMode:'none'},f.dir),/согласованы/);
+  const meta=join(f.dir,'public.json');await writeFile(meta,JSON.stringify({authMode:'none'}));
+  const result=await runtime(f.dir).call('verification_curl',{url:f.base,configFile:meta});
+  assert.equal(result.isError,true);assert.equal(result.details.outcome,'blocked');
+  assert.match(result.details.reason,/согласованы/);assert.equal(f.requests.length,0);
 });
 test('HTTP: redirect is not followed',async t=>{
   const f=await fixture(t),report=await f.run({url:f.base+'/redirect'});

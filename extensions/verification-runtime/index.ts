@@ -13,7 +13,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 const authFields = {
   configFile: Type.Optional(Type.String({ description: "Путь к JSON-указателю; только пути, не secrets." })),
   jwtFile: Type.Optional(Type.String({ description: "Путь к файлу JWT; никогда не сам JWT." })),
-  authMode: Type.Optional(StringEnum(["jwt", "headers"])),
+  authMode: Type.Optional(StringEnum(["jwt", "headers", "none"])),
   headerFiles: Type.Optional(Type.Array(Type.Object({ name: Type.String(), file: Type.String() }, { additionalProperties: false }), { maxItems: 8 })),
 };
 const result = (value: unknown, isError = false) => ({
@@ -109,7 +109,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerTool({
     name: "verification_auth", label: "HTTP auth references",
-    description: "Получает только безопасные ссылки на credential-файлы: явные пути, локальный .paiw/verification.json или персональный PAIW-указатель. Значения JWT/credentials не читает и не возвращает. При blocked запроси недостающее у пользователя.",
+    description: "Разрешает схему авторизации и безопасные ссылки на credential-файлы. Явный authMode none не требует credentials и не ищет PAIW-указатель. Значения JWT/credentials не читает и не возвращает. При blocked запроси недостающее у пользователя.",
     parameters: Type.Object(authFields, { additionalProperties: false }),
     async execute(_id, input, _signal, _update, ctx) {
       try {
@@ -124,7 +124,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerTool({
     name: "verification_curl", label: "Local HTTP verification",
-    description: "Выполняет один согласованный локальный curl. Credentials принимает только файлами и загружает внутри исполнителя; не выводит их, не следует редиректам и не использует curlrc/proxy. mutationApproved/authApproved означают уже полученное явное разрешение, а не заменяют его.",
+    description: "Выполняет один согласованный локальный curl. Явный authMode none — без credentials; JWT/headers принимает только файлами и загружает внутри исполнителя. Не следует редиректам и не использует curlrc/proxy. mutationApproved/authApproved означают уже полученное разрешение; none требует authApproved, автоматического fallback нет.",
     parameters: Type.Object({
       ...authFields,
       url: Type.String(), method: Type.Optional(StringEnum(["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"])),

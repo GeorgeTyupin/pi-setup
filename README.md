@@ -20,9 +20,7 @@ pi-setup/
 ├── skills/
 │   ├── code-review/
 │   ├── curler/
-│   ├── docs-loader/
 │   ├── skill-creator-personal/
-│   ├── standby/
 │   ├── tester/
 │   └── to-work/
 ├── config/settings.base.json

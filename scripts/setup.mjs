@@ -53,31 +53,6 @@ export function planSettings({ root, agentDir, profile, current = {}, state = {}
   return { settings: result, managedPackages, managedPaths, managedValues };
 }
 
-// Keep global routing short; development procedures live in versioned documentation.
-const INSTRUCTIONS = `# Работа с Pi
-
-## Выполнение задач
-
-- Учитывай инструкции текущего проекта и согласованный объём задачи. Настройки сборки Pi не заменяют правила проекта.
-- Подбирай доступные скиллы по актуальным описаниям и условиям применения, в том числе по обычной просьбе без slash-команды. Загружай только подходящие инструкции; не закрепляй обязательный список имён и не подключай отдельный flow к каждой мелкой задаче.
-- Автовыбор инструкций не разрешает новые правки, самостоятельный трек, запуск агентов или инфраструктуры и внешние изменения. Действуй в пределах текущего запроса и уже согласованного плана; не переспрашивай полученное разрешение без изменения объёма.
-- Явно указанные в текущем запросе режим исполнения и effort используй без повторных вопросов. Уточняй только недостающие существенные параметры; не подменяй их прежним выбором или настройками модели.
-- Результаты агентов возвращай кратким текстом прямо в чат: статус, существенные находки и ограничения. Не заменяй итог ссылкой на файл и не создавай файлы отчётов без запроса.
-
-## Сопровождение сборки
-
-- Исходники сборки находятся в {{SOURCE_ROOT}}, не в cwd разрабатываемого проекта.
-- Перед сопровождением, созданием или переносом компонента прочитай {{SOURCE_ROOT}}/docs/pi-maintaining.md: выбор общего/рабочего слоя, подключение, зависимости, обновление и публикация.
-- Перед реализацией прочитай {{SOURCE_ROOT}}/docs/pi-development.md: контракты компонентов, соразмерные проверки и отчёты. Не запускай полный набор проверок ради правки текста.
-- Общие зависимости объявляй с точными версиями в config/settings.base.json, рабочие — в локальном work/settings.json. Локальная установка пакета не обновляет исходники сборки. work/, credentials и живые конфиги не включай в Git или переносимый пакет.
-- README оставляй кратким: установка, дерево компонентов, таблица сторонних расширений и ссылки. Любое расширение этого состава сначала согласуй с пользователем.
-
-## Границы и разрешения
-
-- Управляемые PAIW-источники не редактируй и не копируй в сборку. При обновлении AGENTS.md сохраняй блок PAIW и пользовательский текст вне PI CONFIG.
-- Сохраняй текущие изменения пользователя. Не создавай ветки, коммиты и не выполняй push без соответствующего разрешения. Сообщения коммитов — короткие, на русском, если проект или текущий запрос не требует иного.
-- Перед использованием Computer Use получи явное разрешение пользователя. Если общая просьба допускает такой способ работы, сначала уточни, можно ли его использовать, и дождись ответа.
-`;
 
 const BEGIN = "<!-- BEGIN PI CONFIG -->", END = "<!-- END PI CONFIG -->";
 export function mergeInstructions(existing, template, root) {
@@ -130,7 +105,8 @@ export function configure({ root = sourceRoot, agentDir, profile, adopt = false,
   const plan = planSettings({ root, agentDir, profile, current, state, base, work });
   const agentsPath = join(agentDir, "AGENTS.md");
   const existingAgents = existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : "";
-  const agents = mergeInstructions(existingAgents, INSTRUCTIONS, root);
+  const template = readFileSync(join(root, "AGENTS.example.md"), "utf8");
+  const agents = mergeInstructions(existingAgents, template, root);
   const footer = profile === "work" && existsSync(join(root, "work/codex-footer.json")) ? readJson(join(root, "work/codex-footer.json")) : undefined;
   for (const path of [agentDir, settingsPath, statePath, agentsPath, join(agentDir, "runtime"), join(agentDir, "codex-footer.json"), join(agentDir, "bin"), ...["pi-config", "pi-config.cmd", "pi-config.mjs", "pi-runtime.json"].map(name => join(agentDir, "bin", name)), join(agentDir, "backups")]) {
     if (existsSync(path) && lstatSync(path).isSymbolicLink()) throw new Error(`Refusing managed destination symlink: ${path}`);

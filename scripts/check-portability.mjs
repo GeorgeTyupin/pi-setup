@@ -21,6 +21,7 @@ export function checkPortability(root) {
     } else target.push(path);
   };
   for (const dir of ["agents", "extensions", "config"]) visit(join(root, dir));
+  visit(join(root, "AGENTS.example.md"));
   if (existsSync(join(root, "skills"))) {
     for (const name of readdirSync(join(root, "skills"))) {
       if (!["paiw", ".DS_Store", ".cache", "node_modules"].includes(name)) visit(join(root, "skills", name));
@@ -107,6 +108,8 @@ export function checkPortability(root) {
     const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
     if (JSON.stringify(manifest.pi) !== JSON.stringify({ extensions: ["./extensions", "!extensions/idea-selection/**", "!extensions/idea-selection.*", "!extensions/subagent/**"], skills: ["./skills/*/SKILL.md", "!skills/paiw/**"] })) errors.push("Unexpected Pi manifest: review resource boundaries");
     if (existsSync(join(root, "agents")) && (JSON.stringify(manifest["pi-subagents"]) !== JSON.stringify({ agents: ["./agents"] }) || !(manifest.files ?? []).includes("agents"))) errors.push("Agent directory must be discoverable and included in package files");
+    if (!(manifest.files ?? []).includes("AGENTS.example.md") || !existsSync(join(root, "AGENTS.example.md"))) errors.push("Shared instructions must exist and be included in package files");
+    else if (/\bPAIW\b|BEGIN PI CONFIG|BEGIN PAIW MANAGED BLOCK/i.test(readFileSync(join(root, "AGENTS.example.md"), "utf8"))) errors.push("Shared instructions must not export local integration blocks");
     if ((manifest.files ?? []).some(path => path === "work" || path.startsWith("work/"))) errors.push("Work layer included in package files");
     const base = JSON.parse(readFileSync(join(root, "config/settings.base.json"), "utf8"));
     if (["defaultProvider", "defaultModel", "enabledModels"].some(key => key in base)) errors.push("Provider/model bindings must remain local");

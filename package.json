@@ -12,7 +12,7 @@
     "skills": ["./skills/*/SKILL.md", "!skills/paiw/**"]
   },
   "pi-subagents": { "agents": ["./agents"] },
-  "files": ["agents", "extensions", "skills/*/SKILL.md", "skills/*/references/**", "skills/*/scripts/**", "skills/*/assets/**", "config", "scripts", "README.md", "docs"],
+  "files": ["agents", "extensions", "skills/*/SKILL.md", "skills/*/references/**", "skills/*/scripts/**", "skills/*/assets/**", "config", "scripts", "README.md", "AGENTS.example.md", "docs"],
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",

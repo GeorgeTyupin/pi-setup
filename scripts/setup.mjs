@@ -53,22 +53,14 @@ export function planSettings({ root, agentDir, profile, current = {}, state = {}
   return { settings: result, managedPackages, managedPaths, managedValues };
 }
 
-// Installer-owned instructions are embedded; no separate example file is needed.
-const INSTRUCTIONS = `# Правила сборки Pi
+// Keep global routing short; development procedures live in versioned documentation.
+const INSTRUCTIONS = `# Работа со сборкой Pi
 
 - Исходники сборки находятся в {{SOURCE_ROOT}}, не в cwd разрабатываемого проекта.
-- Общие скиллы: skills/<slug>/SKILL.md, name <slug>, вызов /pi:<slug>.
-- Рабочие скиллы: work/skills/<slug>/SKILL.md, name <slug>, вызов /work:<slug>; старые имена с -oneab сохраняй.
-- Категория определяется расположением. Проверяй конфликты нативных имён Pi; префиксы автоматически не добавляй.
-- Каждый extension — атомарная папка с index.ts и локальными helpers. Не импортируй код из соседних extensions или общей lib/.
-- Явные create / «общий» выбирают общий слой, create work / «рабочий» — work. Без режима определяй по обязательным зависимостям, при неоднозначности или противоречии спрашивай.
-- Сторонние ресурсы относятся к /other:<name>; управляемые PAIW-источники не редактируй и не копируй в сборку.
-- Перед созданием скилла используй /pi:skill-creator-personal. Перенос в work: /pi:to-work или preview scripts/components.mjs to-work.
-- Новые компоненты обнаруживаются по каталогам; отдельных записей в manifest и gitignore не требуется.
-- Общие компоненты не должны содержать secrets, внутренние адреса, пути пользователя или обязательные рабочие зависимости.
-- Выполняй scripts/check-portability.mjs и доступные проверки кода. Папки tests/ и work/tests/ этой сборки не создавай без запроса. Предлагай /reload. Не коммить и не публикуй автоматически.
-- Внешние npm-extensions добавляй в config/settings.base.json с точной версией; зависимости своего extension — в его package.json с согласованием установки. Host-пакеты Pi — peerDependencies.
-- Перед публикацией проверяй состав коммита, секреты и права на сторонний код: gitignore не удаляет файлы из истории.
+- При сопровождении, создании или переносе скилла, extension либо агента сначала прочитай {{SOURCE_ROOT}}/docs/pi-maintaining.md: там выбор общего/рабочего слоя, размещение и обновление.
+- Перед реализацией компонента прочитай {{SOURCE_ROOT}}/docs/pi-development.md: там контракты, зависимости, проверки и краткие отчёты агентов в чат.
+- Подходящие наши скиллы выбирай по актуальным описаниям и условиям применения внутри разрешённой задачи; не закрепляй их имена в общих правилах. Управляемые PAIW-источники не редактируй и не копируй в сборку.
+- Рабочий слой work/ не включай в Git и переносимый пакет. Не коммить и не публикуй без разрешения пользователя.
 `;
 
 const BEGIN = "<!-- BEGIN PI CONFIG -->", END = "<!-- END PI CONFIG -->";

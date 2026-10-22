@@ -37,6 +37,7 @@ pi-setup/
 │   └── verify/                   # Координация проверок
 ├── work/                         # Локальные рабочие компоненты, вне Git
 ├── config/settings.base.json     # Общие настройки и зависимости
+├── config/themes/personal.json   # Catppuccin Mocha и контрастные рамки thinking
 ├── scripts/                      # Установка, обновление и обслуживание
 ├── docs/                         # Подробные правила и процедуры
 ├── package.json

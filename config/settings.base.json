@@ -12,6 +12,8 @@
     "npm:pi-subagents@0.80.0",
     "npm:pi-web-access@0.44.0"
   ],
+  "themes": ["config/themes"],
+  "theme": "personal",
   "enableSkillCommands": true,
   "defaultThinkingLevel": "medium",
   "compaction": { "enabled": true }

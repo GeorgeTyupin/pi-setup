@@ -15,6 +15,7 @@
 /skills/paiw/
 /extensions/idea-selection/
 /extensions/idea-selection.*
+/extensions/subagent/
 
 # Secrets, dependencies and generated files, including inside source directories.
 **/node_modules/

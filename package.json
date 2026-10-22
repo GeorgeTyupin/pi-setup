@@ -8,7 +8,7 @@
   "engines": { "node": ">=22.19.0" },
   "piRuntimeVersion": "1.1.0",
   "pi": {
-    "extensions": ["./extensions", "!extensions/idea-selection/**", "!extensions/idea-selection.*"],
+    "extensions": ["./extensions", "!extensions/idea-selection/**", "!extensions/idea-selection.*", "!extensions/subagent/**"],
     "skills": ["./skills/*/SKILL.md", "!skills/paiw/**"]
   },
   "files": ["extensions", "skills/*/SKILL.md", "skills/*/references", "skills/*/scripts", "skills/*/assets", "config", "scripts", "README.md", "docs"],

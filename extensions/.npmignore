@@ -1,6 +1,7 @@
 # Local third-party integration is not part of the distributable package.
 idea-selection/
 idea-selection.*
+subagent/
 
 # Do not package local credentials, dependencies or generated files.
 **/node_modules/

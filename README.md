@@ -51,6 +51,7 @@ pi-setup/
 | `pi-execution-time` | Время выполнения |
 | `pi-context-view` | Просмотр контекста |
 | `@hank-warren/pi-ask-user-question` | Вопросы с вариантами |
+| `@injaneity/pi-computer-use` | Просмотр и управление GUI по разрешению пользователя |
 | `pi-session-kit` | Управление сессиями |
 | `pi-better-edit` | Редактирование файлов |
 | `pi-lens` | Навигация и диагностика кода |

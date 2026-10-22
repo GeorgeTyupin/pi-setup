@@ -4,6 +4,7 @@
 !/README.md
 !/package.json
 !/tsconfig.json
+!/agents/
 !/config/
 !/docs/
 !/extensions/

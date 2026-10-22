@@ -20,7 +20,7 @@ export function checkPortability(root) {
       }
     } else target.push(path);
   };
-  for (const dir of ["extensions", "config"]) visit(join(root, dir));
+  for (const dir of ["agents", "extensions", "config"]) visit(join(root, dir));
   if (existsSync(join(root, "skills"))) {
     for (const name of readdirSync(join(root, "skills"))) {
       if (!["paiw", ".DS_Store", ".cache", "node_modules"].includes(name)) visit(join(root, "skills", name));
@@ -76,6 +76,7 @@ export function checkPortability(root) {
     }
   }
   const names = new Set();
+  const agentNames = new Set();
   for (const file of files) {
     const rel = relative(root, file);
     if (/(?:^|\/)(?:auth\.json|\.env(?:\..*)?|.*\.(?:pem|key|secret\.yaml))$/.test(rel)) errors.push(`Secret-like file: ${rel}`);
@@ -83,6 +84,13 @@ export function checkPortability(root) {
     const text = readFileSync(file, "utf8");
     if (/vk\.team|vk-proxy|pi-harness|ABUP-\d|\/Users\/[\w.-]+\/|\/home\/[\w.-]+\//i.test(text)) errors.push(`Work or machine-specific reference: ${rel}`);
     if (/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\b(?:glpat-|ghp_|sk-proj-)[A-Za-z0-9_-]{16,}/.test(text)) errors.push(`Possible credential: ${rel}`);
+    if (rel.startsWith(`agents${sep}`) && file.endsWith(".md")) {
+      const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text)?.[1] ?? "";
+      const name = /^name:\s*([a-z0-9-]+)\s*$/m.exec(frontmatter)?.[1];
+      if (!name || name !== basename(file, ".md") || agentNames.has(name)) errors.push(`Invalid/duplicate portable agent name: ${rel}`);
+      if (!/^description:\s*\S/m.test(frontmatter)) errors.push(`Missing agent description: ${rel}`);
+      agentNames.add(name);
+    }
     if (basename(file) === "SKILL.md") {
       const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text)?.[1];
       const name = /^name:\s*([a-z0-9-]+)\s*$/m.exec(frontmatter ?? "")?.[1];
@@ -98,6 +106,7 @@ export function checkPortability(root) {
   try {
     const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
     if (JSON.stringify(manifest.pi) !== JSON.stringify({ extensions: ["./extensions", "!extensions/idea-selection/**", "!extensions/idea-selection.*", "!extensions/subagent/**"], skills: ["./skills/*/SKILL.md", "!skills/paiw/**"] })) errors.push("Unexpected Pi manifest: review resource boundaries");
+    if (existsSync(join(root, "agents")) && (JSON.stringify(manifest["pi-subagents"]) !== JSON.stringify({ agents: ["./agents"] }) || !(manifest.files ?? []).includes("agents"))) errors.push("Agent directory must be discoverable and included in package files");
     if ((manifest.files ?? []).some(path => path === "work" || path.startsWith("work/"))) errors.push("Work layer included in package files");
     const base = JSON.parse(readFileSync(join(root, "config/settings.base.json"), "utf8"));
     if (["defaultProvider", "defaultModel", "enabledModels"].some(key => key in base)) errors.push("Provider/model bindings must remain local");

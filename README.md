@@ -20,6 +20,7 @@ pi-setup/
 │   ├── inline-skill-autocomplete/ # Выбор скилла внутри сообщения
 │   ├── manual-skills/             # Политика автовыбора скиллов
 │   ├── new-named-session/         # Новая сессия с названием
+│   ├── pi-lens-golangci-adapter/  # Адаптер Pi Lens для golangci-lint v2
 │   ├── scoped-thinking/          # Выбор thinking для следующего сообщения
 │   ├── skill-namespaces/          # Команды /pi:, /work:, /other:
 │   └── verification-runtime/      # Режимы проверок, effort и безопасный curl

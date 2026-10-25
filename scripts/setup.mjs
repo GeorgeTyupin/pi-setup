@@ -118,12 +118,14 @@ export function configure({ root = sourceRoot, agentDir, profile, adopt = false,
       if (!/^(?:npm:|git:|https?:)/.test(source) && !existsSync(source)) throw new Error(`Local package not available: ${source}`);
     }
   }
+  if (!skipInstall) console.log(`Checking pinned Pi runtime ${manifest.piRuntimeVersion}...`);
   let pi = findPi(root, agentDir, manifest.piRuntimeVersion);
   if (!pi && !skipInstall) {
     runNpm(["install", "--prefix", join(agentDir, "runtime"), "--ignore-scripts", "--omit=dev", "--no-audit", "--no-fund", "--save-exact", `${sdkName}@${manifest.piRuntimeVersion}`]);
     pi = runtimeEntry(join(agentDir, "runtime/node_modules", sdkName), manifest.piRuntimeVersion);
     if (!pi) throw new Error("Pinned Pi runtime validation failed; settings unchanged");
   }
+  console.log("Applying configuration settings and Markdown instructions...");
   saveFile(settingsPath, JSON.stringify(plan.settings, null, 2) + "\n", agentDir);
   saveFile(agentsPath, agents, agentDir, 0o644);
   if (footer) {
@@ -138,6 +140,7 @@ export function configure({ root = sourceRoot, agentDir, profile, adopt = false,
   // Record ownership before package downloads, so an interrupted install can be resumed safely.
   saveFile(statePath, JSON.stringify({ profile, sourceRoot: root, ...plan }, null, 2) + "\n", agentDir);
   if (!skipInstall) {
+    console.log("Installing or updating configured extensions and packages...");
     const updated = spawnSync(pi.node, [pi.script, "update", "--extensions"], { stdio: "inherit", env: { ...process.env, PI_CODING_AGENT_DIR: agentDir } });
     if (updated.error || updated.status !== 0) throw new Error("Package installation failed; local backups are in backups/. Re-run setup after resolving the error.");
   }

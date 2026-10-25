@@ -68,7 +68,7 @@ export async function main(argv = process.argv.slice(2), { preparedRoot } = {}) 
     "no-launch": { type: "boolean" }, help: { type: "boolean", short: "h" },
   } });
   if (values.help) {
-    console.log("pi-setup [--agent-dir PATH] [--adopt] [--dry-run|--dryrun] [--no-launch]\nInstalls or updates the configuration, then launches Pi; pass Pi arguments after --.");
+    console.log("pi-setup [--agent-dir PATH] [--adopt] [--dry-run|--dryrun] [--no-launch]\nUpdates repository, settings, Markdown instructions, pinned Pi runtime and packages, then launches Pi; pass Pi arguments after --.");
     return 0;
   }
   values["dry-run"] = Boolean(values["dry-run"] || values.dryrun);
@@ -82,6 +82,7 @@ export async function main(argv = process.argv.slice(2), { preparedRoot } = {}) 
   if (!["home", "work"].includes(profile)) throw new Error("Unknown profile");
   if (state.profile && state.profile !== profile) throw new Error("Use a separate --agent-dir to switch profiles safely");
   let root = preparedRoot || (values["source-root"] && resolve(values["source-root"]));
+  if (!root && !values["dry-run"]) console.log("Refreshing configuration repository...");
   if (!root && profile === "work") {
     root = state.sourceRoot;
     if (!root || !existsSync(join(root, "work/settings.json"))) throw new Error("Work requires an existing local source with work/settings.json");

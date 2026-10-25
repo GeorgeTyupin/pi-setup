@@ -8,8 +8,6 @@
 npx --yes --package="https://codeload.github.com/GeorgeTyupin/pi-setup/tar.gz/refs/heads/main?v=0.2.1" pi-setup
 ```
 
-Команда устанавливает или обновляет сборку и запускает Pi. Локальный рабочий слой `work/` переносится отдельно и не входит в Git или общий пакет.
-
 ## Состав
 
 ```text

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, mkdirSync, mkdtempSync, renameSync, rmSync, lstatSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, renameSync, rmSync, lstatSync, realpathSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -105,6 +105,15 @@ export async function main(argv = process.argv.slice(2), { preparedRoot } = {}) 
   const { configure } = await import(pathToFileURL(join(root, "scripts/setup.mjs")).href);
   const result = configure({ root, agentDir, profile, adopt, dryRun: values["dry-run"], skipInstall: values["skip-install"] });
   if (values["dry-run"]) { console.log(JSON.stringify(result, null, 2)); return 0; }
+  if (!values["skip-install"]) {
+    const updatePath = join(agentDir, "pi-config-update-state.json");
+    const temp = `${updatePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+    const now = new Date().toISOString();
+    try {
+      writeFileSync(temp, JSON.stringify({ lastSuccessAt: now, lastAttemptAt: now }, null, 2) + "\n", { flag: "wx", mode: 0o600 });
+      renameSync(temp, updatePath);
+    } finally { rmSync(temp, { force: true }); }
+  }
   console.log(`Pi ${command === "update" ? "updated" : "installed"}.`);
   if (!values["no-launch"]) {
     if (!result.runtime) throw new Error("Pi runtime is missing; run pi-setup without --skip-install");

@@ -2,7 +2,13 @@
 
 Переносимая сборка Pi. Нужен Node.js ≥22.19.
 
-## Установка и обновление
+## Установка Pi
+
+```sh
+npm install -g @earendil-works/pi-coding-agent
+```
+
+## Установка и обновление сборки
 
 ```sh
 npx --yes --package="https://codeload.github.com/GeorgeTyupin/pi-setup/tar.gz/refs/heads/main?v=0.2.1" pi-setup
@@ -13,6 +19,7 @@ npx --yes --package="https://codeload.github.com/GeorgeTyupin/pi-setup/tar.gz/re
 ```text
 pi-setup/
 ├── extensions/
+│   ├── auto-update/               # Обновление сборки раз в неделю
 │   ├── codex-footer/              # Лимиты Codex/ChatGPT
 │   ├── compact-footer/            # Компактный footer и название сессии
 │   ├── inline-skill-autocomplete/ # Выбор скилла внутри сообщения
